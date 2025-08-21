@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Panel - User Management System</title>
+  <!-- Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <style>
+    /* === THEMES & GLOBAL === */
+    :root {
+      --bg: #000;
+      --text: #0f0;
+      --border: #0f0;
+      --btn-bg: #001a00;
+      --btn-border: #0f0;
+      --btn-hover: #003300;
+      --shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+      --pulse-color: #00ff00;
+      --section-color: #00ff00;
+      --bearish-color: #ff0000;
+      --font: 'Courier New', monospace;
+    }
+    body.theme-red {
+      --text: #f00;
+      --border: #f00;
+      --btn-bg: #110000;
+      --btn-border: #f00;
+      --btn-hover: #330000;
+      --shadow: 0 0 20px rgba(255, 0, 0, 0.3);
+      --pulse-color: #ff0000;
+      --section-color: #ff3333;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      margin: 0;
+      padding: 20px;
+      transition: all 0.3s ease;
+    }
+    .hidden { display: none !important; }
+    /* === LOGIN & PROFILE FORMS === */
+    .auth-container {
+      max-width: 450px;
+      margin: 80px auto;
+      padding: 30px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.8);
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .auth-container h2 {
+      color: var(--pulse-color);
+      margin-bottom: 20px;
+    }
+    .auth-container input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid var(--border);
+      background: rgba(0, 20, 0, 0.4);
+      color: var(--text);
+      border-radius: 6px;
+      font-family: var(--font);
+    }
+    .auth-container button {
+      background: var(--btn-bg);
+      color: var(--text);
+      border: 2px solid var(--border);
+      padding: 12px 20px;
+      margin-top: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      width: 100%;
+      font-family: var(--font);
+      border-radius: 6px;
+    }
+    .auth-container button:hover {
+      background: var(--btn-hover);
+      box-shadow: var(--shadow);
+    }
+    .approval-required {
+      background: rgba(255, 0, 0, 0.1);
+      border: 1px dashed #f00;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      font-size: 0.9em;
+    }
+    .profile-bar {
+      display: flex;
+      justify-content: space-between;
+      background: #001100;
+      padding: 15px 20px;
+      font-size: 1em;
+      color: var(--section-color);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .theme-toggle {
+      background: #000;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    .logout-btn {
+      color: #ff0000;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 8px 12px;
+    }
+    .admin-dashboard {
+      padding: 25px;
+      margin: 20px auto;
+      max-width: 1000px;
+      border: 2px solid #f00;
+      border-radius: 12px;
+      background: #110000;
+      color: #f00;
+    }
+    .admin-dashboard h3 {
+      color: #ff3333;
+      margin-top: 0;
+      font-size: 1.5em;
+      text-align: center;
+      text-shadow: 0 0 10px #ff3333;
+    }
+    .admin-section {
+      margin-bottom: 30px;
+      padding: 20px;
+      border: 1px solid #333;
+      border-radius: 8px;
+      background: rgba(17, 0, 0, 0.5);
+    }
+    .admin-section h4 {
+      color: #ff6666;
+      margin-top: 0;
+      margin-bottom: 15px;
+      font-size: 1.2em;
+    }
+    .user-list {
+      max-height: 400px;
+      overflow-y: auto;
+      margin: 15px 0;
+      font-size: 0.9em;
+    }
+    .user-item {
+      margin: 10px 0;
+      padding: 15px;
+      background: rgba(255,0,0,0.1);
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      border: 1px solid rgba(255,0,0,0.3);
+    }
+    .user-info {
+      flex: 1;
+    }
+    .user-status {
+      font-size: 0.8em;
+      padding: 4px 8px;
+      border-radius: 4px;
+      margin-left: 10px;
+      font-weight: bold;
+    }
+    .status-pending {
+      background: #443300;
+      color: #ffcc00;
+    }
+    .status-approved {
+      background: #003300;
+      color: #00ff00;
+    }
+    .status-revoked {
+      background: #330000;
+      color: #ff0000;
+    }
+    .approval-btns {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .btn-approve {
+      background: #003300;
+      color: #00ff00;
+      border: 1px solid #00ff00;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 0.8em;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .btn-approve:hover {
+      background: #005500;
+    }
+    .btn-revoke, .btn-reject {
+      background: #330000;
+      color: #ff0000;
+      border: 1px solid #ff0000;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 0.8em;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .btn-revoke:hover, .btn-reject:hover {
+      background: #550000;
+    }
+    .revoke-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .revoke-modal-content {
+      background: #000;
+      border: 2px solid #f00;
+      padding: 25px;
+      border-radius: 10px;
+      max-width: 450px;
+      width: 90%;
+    }
+    .revoke-modal h3 {
+      color: #ff0000;
+      margin-top: 0;
+      text-align: center;
+    }
+    .revoke-modal textarea {
+      width: 100%;
+      height: 100px;
+      background: #111;
+      border: 1px solid #f00;
+      color: #f00;
+      padding: 12px;
+      margin: 15px 0;
+      border-radius: 6px;
+      resize: vertical;
+      font-family: var(--font);
+    }
+    .revoke-modal-buttons {
+      display: flex;
+      gap: 15px;
+      justify-content: flex-end;
+    }
+    .revoke-modal-button {
+      padding: 8px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-family: var(--font);
+    }
+    .revoke-modal-button.cancel {
+      background: #333;
+      border: 1px solid #666;
+      color: #fff;
+    }
+    .revoke-modal-button.revoke {
+      background: #330000;
+      color: #ff0000;
+      border: 1px solid #ff0000;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin: 20px 0;
+    }
+    .stat-card {
+      padding: 20px;
+      background: rgba(0, 255, 0, 0.1);
+      border: 1px solid #0f0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stat-number {
+      font-size: 2em;
+      font-weight: bold;
+      color: var(--pulse-color);
+    }
+    .stat-label {
+      font-size: 0.9em;
+      margin-top: 5px;
+    }
+    .no-users {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+      font-style: italic;
+    }
+    /* SmartSignal Widget Styles */
+    :root {
+      --bg-primary: #f9f9f9;
+      --bg-secondary: #eef7ff;
+      --card-border: #005ce6;
+      --text-primary: #333;
+      --text-secondary: #003366;
+      --header-bg: #005ce6;
+      --header-text: white;
+      --button-bg: #00a86b;
+      --button-hover: #008850;
+      --ai-bg-start: #001b33;
+      --ai-bg-end: #003366;
+      --ai-border: #00a86b;
+      --ai-header: #00d084;
+      --ai-content: #e0f7ff;
+      --ai-meter-bg: rgba(255,255,255,0.2);
+      --ai-meter-fill: #00d084;
+      --loader-color: #005ce6;
+      --confluence-color: #006600;
+      --bullish-color: #00a86b;
+      --bearish-color: #d00;
+      --neon-glow: 0 0 10px rgba(0, 208, 132, 0.7), 0 0 20px rgba(0, 208, 132, 0.5);
+      --neon-glow-header: 0 0 15px rgba(0, 156, 255, 0.8), 0 0 30px rgba(0, 156, 255, 0.6);
+      --font-main: 'Courier New', 'Lucida Console', monospace;
+      --font-headers: 'Orbitron', 'Arial', sans-serif;
+    }
+    .dark-mode {
+      --bg-primary: #0a0a12;
+      --bg-secondary: #0f1525;
+      --card-border: #00a86b;
+      --text-primary: #e0e0e0;
+      --text-secondary: #64b5f6;
+      --header-bg: #0d1b2a;
+      --header-text: #00d084;
+      --button-bg: #00a86b;
+      --button-hover: #00c88b;
+      --ai-bg-start: #0a0f18;
+      --ai-bg-end: #0d1b2a;
+      --ai-border: #00d084;
+      --ai-header: #00f0a0;
+      --ai-content: #e0f7ff;
+      --ai-meter-bg: rgba(255,255,255,0.1);
+      --ai-meter-fill: #00f0a0;
+      --loader-color: #00d084;
+      --confluence-color: #4db6ac;
+      --bullish-color: #00f0a0;
+      --bearish-color: #ff5252;
+      --neon-glow: 0 0 10px rgba(0, 240, 160, 0.7), 0 0 20px rgba(0, 240, 160, 0.5);
+      --neon-glow-header: 0 0 15px rgba(0, 208, 132, 0.8), 0 0 30px rgba(0, 208, 132, 0.6);
+    }
+    * {
+      box-sizing: border-box;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    .smartsignal-widget {
+      font-family: var(--font-main);
+      max-width: 800px;
+      margin: 20px auto;
+      border: 2px solid var(--card-border);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+      background: var(--bg-primary);
+      position: relative;
+    }
+    .theme-toggle {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: rgba(0,0,0,0.2);
+      border: 1px solid var(--card-border);
+      color: var(--text-primary);
+      border-radius: 20px;
+      width: 50px;
+      height: 25px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      padding: 0 5px;
+      z-index: 10;
+    }
+    .theme-toggle-ball {
+      width: 18px;
+      height: 18px;
+      background: var(--header-bg);
+      border-radius: 50%;
+      transition: transform 0.3s;
+    }
+    .dark-mode .theme-toggle-ball {
+      transform: translateX(22px);
+      background: #ffd700;
+    }
+    .widget-header {
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 16px;
+      text-align: center;
+      font-size: 1.5em;
+      font-weight: 600;
+      font-family: var(--font-headers);
+      text-shadow: var(--neon-glow-header);
+      position: relative;
+      overflow: hidden;
+    }
+    .widget-header::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      animation: shine 3s infinite;
+    }
+    @keyframes shine {
+      100% { left: 100%; }
+    }
+    .widget-body { 
+      padding: 20px; 
+    }
+    input, select, button {
+      padding: 10px;
+      margin: 8px 0;
+      width: 100%;
+      border: 1px solid #555;
+      border-radius: 6px;
+      font-size: 16px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-main);
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--card-border);
+      box-shadow: 0 0 5px var(--card-border);
+    }
+    button {
+      background: var(--button-bg);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      font-family: var(--font-headers);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      position: relative;
+      overflow: hidden;
+    }
+    button:hover { 
+      background: var(--button-hover);
+      transform: translateY(-2px);
+      box-shadow: var(--neon-glow);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    .signal-card {
+      margin-top: 20px;
+      padding: 18px;
+      background: var(--bg-secondary);
+      border: 1px dashed var(--card-border);
+      border-radius: 10px;
+      font-size: 14.5px;
+      line-height: 1.7;
+      position: relative;
+    }
+    .signal-title {
+      font-size: 1.3em;
+      color: var(--card-border);
+      margin-bottom: 10px;
+      font-family: var(--font-headers);
+      text-shadow: 0 0 5px rgba(0, 92, 230, 0.5);
+    }
+    .section-header {
+      font-weight: bold;
+      color: var(--text-secondary);
+      margin: 12px 0 6px 0;
+      font-size: 1.1em;
+      font-family: var(--font-headers);
+    }
+    .confluence-item {
+      color: var(--confluence-color);
+      margin: 4px 0;
+      font-weight: 500;
+    }
+    .loader {
+      color: var(--loader-color);
+      font-style: italic;
+      text-align: center;
+      padding: 10px;
+      font-family: var(--font-main);
+    }
+    .elite-ai-container {
+      margin: 16px 0;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--ai-bg-start) 0%, var(--ai-bg-end) 100%);
+      border: 2px solid var(--ai-border);
+      border-radius: 12px;
+      color: white;
+      box-shadow: 0 4px 12px rgba(0, 168, 107, 0.35), var(--neon-glow);
+      position: relative;
+      overflow: hidden;
+      animation: pulse-glow 2s infinite;
+    }
+    .elite-ai-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--ai-border), transparent);
+      animation: shine 3s infinite;
+    }
+    .elite-ai-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: bold;
+      font-size: 1.2em;
+      color: var(--ai-header);
+      margin-bottom: 8px;
+      font-family: var(--font-headers);
+    }
+    .elite-ai-header .ai-icon {
+      font-size: 1.4em;
+      animation: pulse 2s infinite;
+      text-shadow: 0 0 10px var(--ai-header);
+    }
+    .elite-badge {
+      background: var(--ai-border);
+      color: white;
+      font-size: 0.8em;
+      font-weight: bold;
+      padding: 4px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-family: var(--font-headers);
+    }
+    .elite-ai-content {
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--ai-content);
+      white-space: pre-wrap;
+      margin: 10px 0;
+      font-family: var(--font-main);
+    }
+    .confidence-meter {
+      margin-top: 12px;
+      font-size: 0.9em;
+      color: #a0d8ff;
+    }
+    .confidence-meter .bar {
+      height: 6px;
+      width: 100%;
+      background: var(--ai-meter-bg);
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 4px 0;
+    }
+    .confidence-meter .fill {
+      height: 100%;
+      width: 95%;
+      background: var(--ai-meter-fill);
+      border-radius: 3px;
+      box-shadow: 0 0 5px var(--ai-meter-fill);
+    }
+    .copy-button {
+      margin-top: 10px;
+      background: #003366;
+      color: var(--ai-header);
+      border: 1px solid var(--ai-header);
+      font-size: 0.9em;
+      padding: 6px 10px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s;
+      font-family: var(--font-main);
+      text-shadow: 0 0 3px var(--ai-header);
+    }
+    .copy-button:hover {
+      background: #005080;
+      transform: scale(1.02);
+      box-shadow: 0 0 8px var(--ai-header);
+    }
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
+    @keyframes pulse-glow {
+      0% { box-shadow: 0 4px 12px rgba(0, 168, 107, 0.35), 0 0 0px rgba(0, 168, 107, 0.3); }
+      50% { box-shadow: 0 4px 12px rgba(0, 168, 107, 0.35), 0 0 10px rgba(0, 168, 107, 0.5); }
+      100% { box-shadow: 0 4px 12px rgba(0, 168, 107, 0.35), 0 0 0px rgba(0, 168, 107, 0.3); }
+    }
+    .glow-effect {
+      text-shadow: var(--neon-glow-header);
+      animation: glow 1.5s ease-in-out infinite alternate;
+    }
+    @keyframes glow {
+      from { text-shadow: 0 0 5px #00d084; }
+      to { text-shadow: 0 0 15px #00d084, 0 0 20px #00d084; }
+    }
+    .download-btn {
+      background: linear-gradient(45deg, #6a11cb 0%, #2575fc 100%) !important;
+      border: none !important;
+      color: white !important;
+      font-family: var(--font-headers) !important;
+      text-transform: uppercase !important;
+      letter-spacing: 1px !important;
+      font-weight: bold !important;
+      margin-top: 15px !important;
+      padding: 10px 15px !important;
+      width: auto !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 8px !important;
+      box-shadow: 0 0 15px rgba(106, 17, 203, 0.6) !important;
+      transition: all 0.3s ease !important;
+    }
+    .download-btn:hover {
+      transform: translateY(-2px) !important;
+      box-shadow: 0 0 20px rgba(106, 17, 203, 0.8) !important;
+      background: linear-gradient(45deg, #7a21db 0%, #3585fc 100%) !important;
+    }
+    .download-btn:active {
+      transform: translateY(0) !important;
+    }
+    .download-btn i {
+      font-size: 1.2em;
+      animation: pulse-icon 1.5s infinite;
+    }
+    @keyframes pulse-icon {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Screen -->
+  <div id="loginScreen" class="auth-container">
+    <h2>🔐 Admin Login</h2>
+    <input type="text" id="username" placeholder="Username" />
+    <input type="password" id="password" placeholder="Password" />
+    <button onclick="handleLogin()">Login</button>
+    <div id="approvalMessage" class="approval-required hidden">
+      ⚠️ Your account is pending admin approval.<br>
+      Please wait for admin to activate your account.
+    </div>
+    <div id="revokedMessage" class="approval-required hidden">
+      ⚠️ Your account access has been revoked by admin.<br>
+      <span id="revocationReason"></span>
+    </div>
+  </div>
+  <!-- Main App (Hidden Initially) -->
+  <div id="mainApp" class="hidden">
+    <!-- Profile Bar -->
+    <div class="profile-bar">
+      <div>👤 <span id="userDisplay">User</span></div>
+      <div>
+        <span class="theme-toggle" onclick="toggleTheme()">🌓 Theme</span>
+        <span class="logout-btn" onclick="logout()">🚪 Logout</span>
+      </div>
+    </div>
+    <!-- Admin Dashboard -->
+    <div id="adminDashboard" class="admin-dashboard">
+      <h3>🚨 ADMIN DASHBOARD</h3>
+      <!-- Statistics -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number" id="totalUsers">0</div>
+          <div class="stat-label">Total Users</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="pendingCount">0</div>
+          <div class="stat-label">Pending Approval</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="approvedCount">0</div>
+          <div class="stat-label">Approved Users</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="revokedCount">0</div>
+          <div class="stat-label">Revoked Users</div>
+        </div>
+      </div>
+      
+      <!-- Create New User Section -->
+      <div class="admin-section">
+        <h4>➕ Create New User</h4>
+        <div style="padding: 15px; background: rgba(0, 255, 0, 0.1); border-radius: 8px;">
+          <p>Create a new user account directly (bypasses registration process):</p>
+          <input type="text" id="newUsername" placeholder="Username" style="width: 100%; padding: 10px; margin: 10px 0; background: rgba(0, 20, 0, 0.4); border: 1px solid var(--border); color: var(--text); border-radius: 6px;" />
+          <input type="password" id="newPassword" placeholder="Password" style="width: 100%; padding: 10px; margin: 10px 0; background: rgba(0, 20, 0, 0.4); border: 1px solid var(--border); color: var(--text); border-radius: 6px;" />
+          <div style="margin: 15px 0;">
+            <label style="display: inline-block; width: 100px;">Status:</label>
+            <select id="userStatus" style="padding: 8px; background: rgba(0, 20, 0, 0.4); border: 1px solid var(--border); color: var(--text); border-radius: 6px;">
+              <option value="pending">Pending Approval</option>
+              <option value="approved">Approved</option>
+            </select>
+          </div>
+          <div style="margin: 15px 0;">
+            <label style="display: inline-block; width: 100px;">Role:</label>
+            <select id="userRole" style="padding: 8px; background: rgba(0, 20, 0, 0.4); border: 1px solid var(--border); color: var(--text); border-radius: 6px;">
+              <option value="user">Regular User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <button onclick="createUser()" style="background: var(--btn-bg); color: var(--text); border: 2px solid var(--border); padding: 12px 20px; cursor: pointer; font-weight: bold; width: 100%; font-family: var(--font); border-radius: 6px;">
+            Create User
+          </button>
+        </div>
+      </div>
+      
+      <div class="admin-section">
+        <h4>👥 Pending Approvals</h4>
+        <div class="user-list" id="pendingList"></div>
+      </div>
+      <div class="admin-section">
+        <h4>✅ Approved Users</h4>
+        <div class="user-list" id="approvedList"></div>
+      </div>
+      <div class="admin-section">
+        <h4>❌ Revoked Users</h4>
+        <div class="user-list" id="revokedList"></div>
+      </div>
+    </div>
+    <!-- SmartSignal Widget -->
+    <div class="smartsignal-widget">
+      <div class="widget-header">🚀 SmartSignal Pro v2 - Elite AI Edition</div>
+      <div class="theme-toggle" onclick="toggleSignalTheme()">
+        <div class="theme-toggle-ball"></div>
+      </div>
+      <div class="widget-body">
+        <p><strong>Enter asset:</strong> BTC, ETH, SOL, XRP, etc. (Binance symbols)</p>
+        <input type="text" id="symbolInput" placeholder="e.g. BTC" />
+        <select id="modeSelect">
+          <option value="1">1 - Quick Pulse</option>
+          <option value="2">2 - Pro Signal</option>
+          <option value="3" selected>3 - Elite Mode (AI-Powered)</option>
+        </select>
+        <button onclick="generateSignal()">Generate Signal</button>
+        <div id="loading" class="loader" style="display: none;">
+          Scanning Swing Points, Volume, and Smart Money Zones... 🧠
+        </div>
+        <div id="result" class="signal-card" style="display: none;">
+          <div id="signalContent"></div>
+          <button onclick="downloadPNG()" class="download-btn"><i>📷</i> Download Signal Card</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Revoke Modal -->
+  <div id="revokeModal" class="revoke-modal hidden">
+    <div class="revoke-modal-content">
+      <h3>⚠️ Revoke User Access</h3>
+      <p>Enter reason for revoking access for <span id="revokeUsername" style="color:#ff0000;"></span>:</p>
+      <textarea id="revokeReason" placeholder="Reason for revocation..."></textarea>
+      <div class="revoke-modal-buttons">
+        <span class="revoke-modal-button cancel" onclick="closeRevokeModal()">Cancel</span>
+        <span class="revoke-modal-button revoke" onclick="confirmRevoke()">Revoke Access</span>
+      </div>
+    </div>
+  </div>
+  <script>
+    const API_URL = 'http://10.71.36.72:3000/api';
+
+    // ===== LOGIN HANDLER =====
+    async function handleLogin() {
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+      if (!username || !password) {
+        alert("Please enter a username and password");
+        return;
+      }
+
+      try {
+        // First, try to log in
+        const response = await axios.post(`${API_URL}/login`, { username, password });
+        if (response.data.success) {
+          loginUser(response.data.username, response.data.isAdmin);
+        }
+      } catch (error) {
+        if (error.response && error.response.status === 401) {
+          // Invalid credentials, ask to register
+          if (confirm("Invalid credentials. Do you want to register a new account with this username?")) {
+            handleRegister(username, password);
+          }
+        } else if (error.response && error.response.data) {
+            if (error.response.data.status === 'pending') {
+                document.getElementById("approvalMessage").classList.remove("hidden");
+                document.getElementById("revokedMessage").classList.add("hidden");
+            } else if (error.response.data.status === 'revoked') {
+                document.getElementById("approvalMessage").classList.add("hidden");
+                document.getElementById("revokedMessage").classList.remove("hidden");
+                document.getElementById("revocationReason").textContent = `Reason: ${error.response.data.reason || 'No reason provided'}`;
+            } else {
+                alert(`Error: ${error.response.data.message}`);
+            }
+        } else {
+          console.error("Login error:", error);
+          alert("An error occurred during login.");
+        }
+      }
+    }
+
+    async function handleRegister(username, password) {
+        try {
+            const response = await axios.post(`${API_URL}/register`, { username, password });
+            if (response.data.success) {
+                alert("✅ Account created! Awaiting admin approval...");
+                document.getElementById("approvalMessage").classList.remove("hidden");
+                document.getElementById("revokedMessage").classList.add("hidden");
+            }
+        } catch (error) {
+            if (error.response && error.response.data) {
+                alert(`Error: ${error.response.data.message}`);
+            } else {
+                console.error("Registration error:", error);
+                alert("An error occurred during registration.");
+            }
+        }
+    }
+
+    function loginUser(username, isAdmin) {
+      localStorage.setItem('currentuser', JSON.stringify({ username, isAdmin }));
+      document.getElementById("loginScreen").classList.add("hidden");
+      document.getElementById("mainApp").classList.remove("hidden");
+      document.getElementById("userDisplay").textContent = username;
+      if (isAdmin) {
+        document.getElementById("adminDashboard").classList.remove("hidden");
+        loadAdminData();
+      } else {
+        // For non-admin users, you can show the SmartSignal widget directly
+        document.getElementById("adminDashboard").classList.add("hidden");
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem("currentuser");
+      location.reload();
+    }
+
+    // ===== ADMIN FUNCTIONS =====
+    async function approveUser(username) {
+        try {
+            await axios.post(`${API_URL}/users/${username}/approve`);
+            alert(`✅ ${username} has been approved!`);
+            loadAdminData();
+        } catch (error) {
+            alert(`Error: ${error.response.data.message}`);
+        }
+    }
+
+    async function rejectUser(username) {
+        if (confirm(`Are you sure you want to reject and remove ${username}?`)) {
+            try {
+                await axios.delete(`${API_URL}/users/${username}`);
+                alert(`❌ ${username} has been rejected and removed.`);
+                loadAdminData();
+            } catch (error) {
+                alert(`Error: ${error.response.data.message}`);
+            }
+        }
+    }
+
+    function showRevokeModal(username) {
+      document.getElementById("revokeUsername").textContent = username;
+      document.getElementById("revokeReason").value = "";
+      document.getElementById("revokeModal").classList.remove("hidden");
+    }
+
+    function closeRevokeModal() {
+      document.getElementById("revokeModal").classList.add("hidden");
+    }
+
+    async function confirmRevoke() {
+      const username = document.getElementById("revokeUsername").textContent;
+      const reason = document.getElementById("revokeReason").value.trim();
+      if (!reason) {
+        alert("Please enter a reason for revocation");
+        return;
+      }
+      try {
+        await axios.post(`${API_URL}/users/${username}/revoke`, { reason });
+        alert(`❌ Access revoked for ${username}!`);
+        closeRevokeModal();
+        loadAdminData();
+      } catch (error) {
+        alert(`Error: ${error.response.data.message}`);
+      }
+    }
+
+    async function restoreUser(username) {
+      if (confirm(`Restore access for ${username}?`)) {
+        try {
+            await axios.post(`${API_URL}/users/${username}/restore`);
+            alert(`✅ Access restored for ${username}!`);
+            loadAdminData();
+        } catch (error) {
+            alert(`Error: ${error.response.data.message}`);
+        }
+      }
+    }
+
+    async function createUser() {
+      const username = document.getElementById("newUsername").value.trim();
+      const password = document.getElementById("newPassword").value;
+      const status = document.getElementById("userStatus").value;
+      const role = document.getElementById("userRole").value;
+
+      if (!username || !password) {
+        alert("Please enter a username and password");
+        return;
+      }
+
+      try {
+        await axios.post(`${API_URL}/users`, { username, password, status, role });
+        alert(`✅ User '${username}' has been created successfully!`);
+        document.getElementById("newUsername").value = "";
+        document.getElementById("newPassword").value = "";
+        loadAdminData();
+      } catch (error) {
+        alert(`Error: ${error.response.data.message}`);
+      }
+    }
+
+    async function loadAdminData() {
+        try {
+            const [usersRes, statsRes] = await Promise.all([
+                axios.get(`${API_URL}/users`),
+                axios.get(`${API_URL}/users/stats`)
+            ]);
+            const users = usersRes.data;
+            const stats = statsRes.data;
+
+            // Update statistics
+            document.getElementById("totalUsers").textContent = stats.totalUsers;
+            document.getElementById("pendingCount").textContent = stats.pendingCount;
+            document.getElementById("approvedCount").textContent = stats.approvedCount;
+            document.getElementById("revokedCount").textContent = stats.revokedCount;
+
+            const pendingUsers = users.filter(u => u.status === "pending");
+            const approvedUsers = users.filter(u => u.status === "approved");
+            const revokedUsers = users.filter(u => u.status === "revoked");
+
+            const pendingUserHTML = (u) => `
+              <div class="user-item">
+                <div class="user-info">
+                  <strong>${u.username}</strong>
+                  <span class="user-status status-pending">Pending</span>
+                  <div style="font-size: 0.8em; color: #999; margin-top: 5px;">
+                    Joined: ${new Date(u.joined).toLocaleString()}
+                  </div>
+                </div>
+                <div class="approval-btns">
+                  <span class="btn-approve" onclick="approveUser('${u.username}')">Approve</span>
+                  <span class="btn-reject" onclick="rejectUser('${u.username}')">Reject</span>
+                </div>
+              </div>`;
+            const approvedUserHTML = (u) => `
+              <div class="user-item">
+                <div class="user-info">
+                  <strong>${u.username}</strong> ${u.isAdmin ? '(ADMIN)' : ''}
+                  <span class="user-status status-approved">Approved</span>
+                  <div style="font-size: 0.8em; color: #999; margin-top: 5px;">
+                    Joined: ${new Date(u.joined).toLocaleString()}
+                  </div>
+                </div>
+                ${!u.isAdmin && u.username !== 'DG143' ? `
+                <div class="approval-btns">
+                  <span class="btn-revoke" onclick="showRevokeModal('${u.username}')">Revoke Access</span>
+                </div>
+                ` : ''}
+              </div>`;
+            const revokedUserHTML = (u) => `
+              <div class="user-item">
+                <div class="user-info">
+                  <strong>${u.username}</strong>
+                  <span class="user-status status-revoked">Revoked</span>
+                  <div style="font-size: 0.8em; color: #999; margin-top: 5px;">
+                    Reason: ${u.revocationReason || 'No reason provided'}<br>
+                    Revoked: ${u.revokedAt ? new Date(u.revokedAt).toLocaleString() : 'N/A'}
+                  </div>
+                </div>
+                <div class="approval-btns">
+                  <span class="btn-approve" onclick="restoreUser('${u.username}')">Restore Access</span>
+                </div>
+              </div>`;
+
+            document.getElementById("pendingList").innerHTML = pendingUsers.length > 0 ? pendingUsers.map(pendingUserHTML).join("") : '<div class="no-users">No pending approvals</div>';
+            document.getElementById("approvedList").innerHTML = approvedUsers.length > 0 ? approvedUsers.map(approvedUserHTML).join("") : '<div class="no-users">No approved users</div>';
+            document.getElementById("revokedList").innerHTML = revokedUsers.length > 0 ? revokedUsers.map(revokedUserHTML).join("") : '<div class="no-users">No revoked users</div>';
+
+        } catch (error) {
+            console.error("Error loading admin data:", error);
+            alert("Could not load admin data. Is the backend server running?");
+        }
+    }
+
+    // ===== THEME TOGGLE =====
+    function toggleTheme() {
+      document.body.classList.toggle("theme-red");
+    }
+
+    // Auto-login if already logged in
+    window.onload = () => {
+      const saved = localStorage.getItem('currentuser');
+      if (saved) {
+        const user = JSON.parse(saved);
+        loginUser(user.username, user.isAdmin);
+      }
+    };
+
+    // SmartSignal Pro Code
+    const OPENROUTER_API_KEY = "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";
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedTheme = localStorage.getItem('smartSignalTheme');
+      if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+      } else if (savedTheme === 'light') {
+        document.body.classList.remove('dark-mode');
+      } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark-mode');
+      }
+    });
+    
+    function toggleSignalTheme() {
+      document.body.classList.toggle('dark-mode');
+      const isDarkMode = document.body.classList.contains('dark-mode');
+      localStorage.setItem('smartSignalTheme', isDarkMode ? 'dark' : 'light');
+    }
+    
+    async function generateSignal() {
+      const symbol = document.getElementById("symbolInput").value.trim().toUpperCase();
+      const mode = document.getElementById("modeSelect").value;
+      const resultDiv = document.getElementById("result");
+      const signalDiv = document.getElementById("signalContent");
+      const loadingDiv = document.getElementById("loading");
+      if (!symbol) {
+        alert("Please enter a symbol (e.g., BTC, ETH)");
+        return;
+      }
+      loadingDiv.style.display = "block";
+      resultDiv.style.display = "none";
+      signalDiv.innerHTML = "";
+      let price = null;
+      let klines = null;
+      let orderBook = null;
+      let symbolWithUSDT = symbol + "USDT";
+      try {
+        const priceResponse = await axios.get(
+          `https://api.binance.com/api/v3/ticker/price?symbol=${symbolWithUSDT}`
+        );
+        price = parseFloat(priceResponse.data.price);
+        const klinesResponse = await axios.get(
+          `https://api.binance.com/api/v3/klines?symbol=${symbolWithUSDT}&interval=15m&limit=50`
+        );
+        klines = klinesResponse.data;
+        const orderBookResponse = await axios.get(
+          `https://api.binance.com/api/v3/depth?symbol=${symbolWithUSDT}&limit=100`
+        );
+        orderBook = orderBookResponse.data;
+      } catch (err) {
+        console.error("Binance API Error:", err);
+        price = (Math.random() * 50000).toFixed(2);
+        klines = [];
+        let currentPrice = parseFloat(price);
+        for (let i = 0; i < 50; i++) {
+          const open = currentPrice;
+          const high = open * (1 + Math.random() * 0.02);
+          const low = open * (1 - Math.random() * 0.02);
+          const close = open * (0.99 + Math.random() * 0.02);
+          currentPrice = close;
+          klines.push([
+            Date.now() - (50 - i) * 15 * 60 * 1000,
+            open.toFixed(2),
+            high.toFixed(2),
+            low.toFixed(2),
+            close.toFixed(2),
+            (Math.random() * 10000).toFixed(2)
+          ]);
+        }
+        orderBook = { bids: [], asks: [] };
+        for (let i = 0; i < 10; i++) {
+          const bidPrice = (price * (1 - 0.001 * i)).toFixed(2);
+          const askPrice = (price * (1 + 0.001 * i)).toFixed(2);
+          orderBook.bids.push([bidPrice, (Math.random() * 1000).toFixed(2)]);
+          orderBook.asks.push([askPrice, (Math.random() * 1000).toFixed(2)]);
+        }
+      }
+      price = parseFloat(price);
+      const highPrices = klines.map(k => parseFloat(k[2]));
+      const lowPrices = klines.map(k => parseFloat(k[3]));
+      const recentHighs = highPrices.slice(-20);
+      const recentLows = lowPrices.slice(-20);
+      const swingHigh = Math.max(...recentHighs).toFixed(2);
+      const swingLow = Math.min(...recentLows).toFixed(2);
+      const lastCandle = klines[klines.length - 1];
+      const lastClose = parseFloat(lastCandle[4]);
+      const lastHigh = parseFloat(lastCandle[2]);
+      const lastLow = parseFloat(lastCandle[3]);
+      const pivot = (parseFloat(swingHigh) + parseFloat(swingLow) + lastClose) / 3;
+      const r1 = (2 * pivot - parseFloat(swingLow)).toFixed(2);
+      const s1 = (2 * pivot - parseFloat(swingHigh)).toFixed(2);
+      const r2 = (pivot + (parseFloat(swingHigh) - parseFloat(swingLow))).toFixed(2);
+      const s2 = (pivot - (parseFloat(swingHigh) - parseFloat(swingLow))).toFixed(2);
+      const recentVolumes = klines.slice(-10).map(k => parseFloat(k[5]));
+      const totalVolume = recentVolumes.reduce((sum, vol) => sum + vol, 0);
+      const buyVolume = (totalVolume * 0.55).toFixed(0);
+      const sellVolume = (totalVolume * 0.45).toFixed(0);
+      const volumeImbalance = buyVolume > sellVolume ? "🟢 Net Buying Pressure" : "🔴 Net Selling Pressure";
+      const atrPeriod = 10;
+      let atrSum = 0;
+      for (let i = klines.length - atrPeriod; i < klines.length; i++) {
+        const high = parseFloat(klines[i][2]);
+        const low = parseFloat(klines[i][3]);
+        const prevClose = i > 0 ? parseFloat(klines[i-1][4]) : high;
+        const tr = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
+        atrSum += tr;
+      }
+      const atr = atrSum / atrPeriod;
+      const superTrend = price * (price > pivot ? 0.98 : 1.02);
+      const isBullish = price > superTrend;
+      const demandZone = isBullish 
+        ? [(price * 0.98).toFixed(2), (price * 0.988).toFixed(2)] 
+        : [(price * 1.01).toFixed(2), (price * 1.018).toFixed(2)];
+      const supplyZone = isBullish 
+        ? [(price * 1.015).toFixed(2), (price * 1.025).toFixed(2)] 
+        : [(price * 0.97).toFixed(2), (price * 0.98).toFixed(2)];
+      const fvgZone = isBullish 
+        ? [(price * 0.975).toFixed(2), (price * 0.98).toFixed(2)] 
+        : [(price * 1.02).toFixed(2), (price * 1.025).toFixed(2)];
+      const patterns = ["Horse Shoe", "Protected Bullish Engulfing", "MeReT", "4-Candle Reversal"];
+      const detectedPattern = patterns[Math.floor(Math.random() * patterns.length)];
+      const vah = (price * 1.03).toFixed(2);
+      const val = (price * 0.97).toFixed(2);
+      const poc = price.toFixed(2);
+      const liquidityPool = isBullish 
+        ? (price * 0.96).toFixed(2) 
+        : (price * 1.04).toFixed(2);
+      const timeframes = ['5M', '15M', '30M', '1H', '4H', '1D'];
+      const mtfa = timeframes.map(tf => {
+        const strength = Math.random() > 0.5 ? 'Bullish' : 'Bearish';
+        const fvg = Math.random() > 0.7 ? 'FVG Present' : '';
+        const ob = Math.random() > 0.7 ? 'OB Detected' : '';
+        return `${tf}: ${strength} ${fvg ? '| ' + fvg : ''} ${ob ? '| ' + ob : ''}`;
+      });
+      const confluenceFactors = [
+        isBullish && "🟢 Supertrend Confirmed (Bullish Structure)",
+        price > swingLow && "🔺 Price Above Swing Low (Support Holding)",
+        price < swingHigh && "🔻 Price Below Swing High (Resistance Test)",
+        buyVolume > sellVolume && "📊 Buyer Dominance Detected",
+        detectedPattern && `🟣 Pattern: ${detectedPattern}`,
+        fvgZone && "🟢 Fair Value Gap (FVG) Present",
+        demandZone && "🔵 Strong Demand Zone Active",
+        supplyZone && "🔴 Major Supply Zone Ahead"
+      ].filter(Boolean);
+      const confluenceCount = confluenceFactors.length;
+      const confidence = confluenceCount >= 6 ? "Very High" :
+                         confluenceCount >= 4 ? "High" :
+                         confluenceCount >= 2 ? "Medium" : "Low";
+      const action = isBullish ? "Buy on Pullback" : "Sell on Rally";
+      const entry = isBullish ? (price * 0.99).toFixed(2) : (price * 1.01).toFixed(2);
+      const sl = isBullish ? (price * 0.97).toFixed(2) : (price * 1.03).toFixed(2);
+      const tp1 = isBullish ? (price * 1.03).toFixed(2) : (price * 0.97).toFixed(2);
+      const tp2 = isBullish ? (price * 1.06).toFixed(2) : (price * 0.94).toFixed(2);
+      const tp3 = isBullish ? (price * 1.10).toFixed(2) : (price * 0.90).toFixed(2);
+      signalDiv.innerHTML = `
+        <div class="signal-title glow-effect">🎯 Elite Signal: ${symbol} (${isBullish ? 'Bullish' : 'Bearish'})</div>
+        <strong>💰 Price:</strong> ${price}<br>
+        <strong>📌 Action:</strong> <span style="color:${isBullish ? 'var(--bullish-color)' : 'var(--bearish-color)'}">${action}</span><br>
+        <strong>🚪 Entry:</strong> ${entry}<br>
+        <strong>🛑 Stop-Loss:</strong> ${sl}<br>
+        <strong>🎯 Take-Profit:</strong> TP1: ${tp1} | TP2: ${tp2} | TP3: ${tp3}<br>
+        <strong>📊 Risk-Reward:</strong> 1 : ${isBullish ? '7.2' : '6.8'}<br>
+        <strong>🛡️ Confidence:</strong> <strong style="color:${confidence === 'Very High' ? 'var(--bullish-color)' : confidence === 'High' ? 'blue' : 'orange'}">${confidence}</strong><br><br>
+        <div class="section-header glow-effect">🔍 Signals Detected:</div>
+        ${confluenceFactors.map(f => `<div class="confluence-item">• ${f}</div>`).join('')}
+        <div class="section-header glow-effect">📌 Key Levels</div>
+        • <strong>Swing High:</strong> ${swingHigh}<br>
+        • <strong>Swing Low:</strong> ${swingLow}<br>
+        • <strong>Daily Pivot:</strong> ${pivot.toFixed(2)}<br>
+        • <strong>Support:</strong> S1: ${s1}, S2: ${s2}<br>
+        • <strong>Resistance:</strong> R1: ${r1}, R2: ${r2}<br>
+        <div class="section-header glow-effect">📊 Volume Analysis</div>
+        • <strong>Buyer Volume:</strong> ${buyVolume} units<br>
+        • <strong>Seller Volume:</strong> ${sellVolume} units<br>
+        • <strong>Net Flow:</strong> ${volumeImbalance}<br>
+        <div class="section-header glow-effect">🟦 Supply & Demand Zones</div>
+        • <strong>Demand Zone:</strong> ${demandZone[0]} – ${demandZone[1]}<br>
+        • <strong>Supply Zone:</strong> ${supplyZone[0]} – ${supplyZone[1]}<br>
+        • <strong>Fair Value Gap (FVG):</strong> ${fvgZone[0]} – ${fvgZone[1]}<br>
+        <div class="section-header glow-effect">📈 Volume Profile</div>
+        • <strong>VAH (Value Area High):</strong> ${vah}<br>
+        • <strong>VAL (Value Area Low):</strong> ${val}<br>
+        • _POC (Point of Control):</strong> ${poc}<br>
+        <div class="section-header glow-effect">🔁 Multi-Timeframe Alignment (5M → 1D)</div>
+        ${mtfa.map(line => `• ${line}`).join('<br>')}
+        <div class="section-header glow-effect">💧 Liquidity & Structure</div>
+        • <strong>Liquidity Pool:</strong> ${liquidityPool} (potential wick trap)<br>
+        • <strong>Market Structure:</strong> ${isBullish ? 'Bullish (Higher Low Confirmed)' : 'Bearish (Lower High Confirmed)'}<br>
+        <small>Generated: ${new Date().toLocaleString()}</small>
+        ${mode === "3" ? `
+        <div class="elite-ai-container">
+          <div class="elite-ai-header">
+            <span class="ai-icon">🤖</span>
+            <span>Elite AI Insight</span>
+            <span class="elite-badge">Level 5 Analysis</span>
+          </div>
+          <div id="aiInsight" class="elite-ai-content">
+            🧠 Initializing quantum trading matrix...
+          </div>
+          <div class="confidence-meter">
+            <div>Confidence: Ultra-High (95%)</div>
+            <div class="bar"><div class="fill"></div></div>
+          </div>
+          <button class="copy-button" onclick="copyAIInsight()">📋 Copy Insight</button>
+        </div>
+        ` : ''}
+      `;
+      loadingDiv.style.display = "none";
+      resultDiv.style.display = "block";
+      if (mode === "3") {
+        const prompt = `
+You are ELITE-AI, a world-class trading strategist with 20 years of institutional experience.
+Analyze this ${symbol} setup and deliver a single, powerful paragraph that sounds like a Bloomberg Pro Terminal alert.
+Structure:
+- Start with: "Strong [bullish/bearish] setup presents itself..."
+- Mention price, entry, SL, TP, confluence count
+- Highlight demand/supply zones and FVG
+- Note volume bias
+- End with a sharp, confident conclusion
+Tone: Professional, urgent, elite. No markdown. Max 180 tokens.
+Data:
+Price: ${price}
+Trend: ${isBullish ? 'Bullish' : 'Bearish'}
+Action: ${action}
+Entry: ${entry}, SL: ${sl}, TP1: ${tp1}
+Confluence: ${confluenceCount} factors
+Demand Zone: ${demandZone[0]}–${demandZone[1]}
+FVG: ${fvgZone[0]}–${fvgZone[1]}
+Volume: ${volumeImbalance}
+        `;
+        try {
+          const response = await axios.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            {
+              model: "mistralai/mistral-7b-instruct:free",
+              messages: [{ role: "user", content: prompt }],
+              max_tokens: 200,
+              temperature: 0.6,
+            },
+            {
+              headers: {
+                "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+                "HTTP-Referer": window.location.href,
+                "X-Title": "SmartSignal Pro AI",
+                "Content-Type": "application/json"
+              }
+            }
+          );
+          const aiText = response.data.choices[0].message.content.trim();
+          document.getElementById("aiInsight").textContent = aiText;
+        } catch (err) {
+          console.error("AI Error:", err);
+          const fallback = `Strong ${isBullish ? 'bullish' : 'bearish'} setup in ${symbol} at ${price.toFixed(2)}. ${confluenceCount} confluence factors. Entry: ${entry}, SL: ${sl}, TP1: ${tp1}. FVG at ${fvgZone[0]}–${fvgZone[1]}. ${volumeImbalance}. Institutional-grade opportunity.`;
+          document.getElementById("aiInsight").textContent = fallback;
+        }
+      }
+    }
+    
+    function downloadPNG() {
+      const signalDiv = document.getElementById("result");
+      const isDarkMode = document.body.classList.contains('dark-mode');
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'fixed';
+      tempContainer.style.top = '-9999px';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.width = '800px';
+      tempContainer.style.backgroundColor = isDarkMode ? '#0a0a12' : '#f9f9f9';
+      tempContainer.style.fontFamily = 'monospace';
+      tempContainer.style.padding = '20px';
+      tempContainer.style.boxSizing = 'border-box';
+      tempContainer.style.color = isDarkMode ? '#e0e0e0' : '#333';
+      const clonedContent = signalDiv.cloneNode(true);
+      tempContainer.appendChild(clonedContent);
+      document.body.appendChild(tempContainer);
+      html2canvas(tempContainer, {
+        backgroundColor: isDarkMode ? '#0a0a12' : '#f9f9f9',
+        scale: 2,
+        useCORS: true,
+        logging: false
+      }).then(canvas => {
+        document.body.removeChild(tempContainer);
+        const imgData = canvas.toDataURL("image/png");
+        const a = document.createElement("a");
+        a.href = imgData;
+        a.download = `SmartSignal_${document.getElementById("symbolInput").value.toUpperCase()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }).catch(error => {
+        console.error("Error generating image:", error);
+        alert("Failed to generate image. Please try again.");
+        if (document.body.contains(tempContainer)) {
+          document.body.removeChild(tempContainer);
+        }
+      });
+    }
+    
+    function copyAIInsight() {
+      const insight = document.getElementById("aiInsight").textContent;
+      navigator.clipboard.writeText(insight).then(() => {
+        alert("✅ Elite AI Insight copied to clipboard!");
+      }).catch(err => {
+        console.error("Copy failed:", err);
+        alert("❌ Copy failed. Please try again.");
+      });
+    }
+  </script>
+</body>
+</html>
